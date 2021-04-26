@@ -12,72 +12,106 @@ class BufferReader {
     }
 } 
 
+interface VMState {
+    memory: BufferReader;
+    ptr: number;
+}
+
 console.log();
-let ptr = 0;
-let halt = false;
-const b = new BufferReader(readfile('challenge.bin'));
 
-// let tt = 0;
-// while(true) {
-//     console.log(b.read(tt));
-//     tt += 2;
-//     if (tt === 2000) break;
-// }
+const initialState: VMState = {
+    ptr: 0,
+    memory: new BufferReader(readfile('challenge.bin')),
+}
 
-while(true) {
+const tick = (state: VMState): VMState => {
 
-    const cmd = b.read(ptr);
-    ptr += 2;
-
+    const cmd = state.memory.read(state.ptr);
     log(cmd);
-
     switch (cmd) {
-    
         case 0: // halt
-            halt = true;
-            break;
+            return { ...state, ptr: -1 }; 
 
-        case 6: // jmp
-            const p6 = b.read(ptr);
-            ptr = (p6 * 2);
-            break;
+        case 6:
+            return { ...state, ptr: state.memory.read(state.ptr + 2) * 2 }; 
 
         case 7:
-            const p7a = b.read(ptr);
-            const p7b = b.read(ptr + 2);
-            ptr = p7a === 0 ? ptr + 4 : p7b * 2; 
-            break;
-
-//             jf: 8 a b
-//   if <a> is zero, jump to <b>
+            const p7a = state.memory.read(state.ptr + 2);
+            const p7b = state.memory.read(state.ptr + 4);
+            return { ...state, ptr: p7a === 0 ? state.ptr + 6 : p7b * 2 }; 
+         
         case 8:
-            const p8a = b.read(ptr);
-            const p8b = b.read(ptr + 2);
-            ptr = p8a === 0 ? p8b * 2 : ptr + 4; 
-            break;
-            
+            const p8a = state.memory.read(state.ptr + 2);
+            const p8b = state.memory.read(state.ptr + 4);
+            return { ...state, ptr: p8a === 0 ? p8b * 2 : state.ptr + 6 }; 
+                 
+//         case 7:
+//             const p7a = b.read(ptr);
+//             const p7b = b.read(ptr + 2);
+//             ptr = p7a === 0 ? ptr + 4 : p7b * 2; 
+//             break;
+
 
         case 19:  // out
-            const p19 = b.read(ptr);
-            print(p19);
-            ptr += 2;
-            break;
-    
-        case 21: // noop
-            // ptr += 2;
-            break; 
-    
+            print(state.memory.read(state.ptr + 2));
+            return { ...state, ptr: state.ptr += 4 }; 
+
+        case 21:
+            return { ...state, ptr: state.ptr += 2 }; 
+
         default:
-           console.log(`COMMAND MISSING : ${cmd}`);
+            console.log(` *** COMMAND MISSING : ${cmd}`);
             break;
     }
 
+    return { ...state, ptr: state.ptr + 2 };
+}
+    
+let state = initialState;
+while(true) {
 
-    if (halt) break;
+    state = tick(state);
+
+
+   if (state.ptr < 0) break;
+    
+
+    
+
+//     switch (cmd) {
+    
+//         case 7:
+//             const p7a = b.read(ptr);
+//             const p7b = b.read(ptr + 2);
+//             ptr = p7a === 0 ? ptr + 4 : p7b * 2; 
+//             break;
+
+// //             jf: 8 a b
+// //   if <a> is zero, jump to <b>
+//         case 8:
+//             const p8a = b.read(ptr);
+//             const p8b = b.read(ptr + 2);
+//             ptr = p8a === 0 ? p8b * 2 : ptr + 4; 
+//             break;
+            
+
+
+    
+//         case 21: // noop
+//             // ptr += 2;
+//             break; 
+    
+//         default:
+//            console.log(`COMMAND MISSING : ${cmd}`);
+//             break;
+//     }
+
+
+
 
 }
 
-// console.log('-- typescript --');
+console.log('-- end --');
 
 // 1 : OKjvrkoklplG
 // 2 : lJsOWtHjOMQj
