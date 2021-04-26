@@ -1,0 +1,21 @@
+{
+  "name": "synacor-challenge",
+  "version": "1.0.0",
+  "description": "",
+  "main": "synacor.js",
+  "dependencies": {
+    "fs": "0.0.1-security",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.12.10",
+    "@babel/preset-typescript": "^7.12.7",
+    "@types/node": "^14.14.20"
+  },
+  "scripts": {
+    "run": "tsc synacor.ts && node synacor.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
