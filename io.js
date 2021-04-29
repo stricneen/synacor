@@ -15,9 +15,7 @@ var print = function (ascii) {
 exports.print = print;
 var log = function (num) {
     switch (num) {
-        case 0:
-            debug('halt');
-            break;
+        // case 0: debug('halt'); break;
         case 1:
             debug('set');
             break;
@@ -33,15 +31,9 @@ var log = function (num) {
         case 5:
             debug('gt');
             break;
-        case 6:
-            debug('jmp');
-            break;
-        case 7:
-            debug('jt');
-            break;
-        case 8:
-            debug('jf');
-            break;
+        // case 6: debug('jmp'); break;
+        // case 7: debug('jt'); break;
+        // case 8: debug('jf'); break;
         case 9:
             debug('add');
             break;
