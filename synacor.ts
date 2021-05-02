@@ -4,16 +4,16 @@ class State {
      ptr: number;
      buf: Buffer;
      register: number[];
-     memory: number[];
+    memory: number[];
 
     constructor(buf: Buffer) {
         this.ptr = 0;
         this.buf = buf;
         this.register = [0,0,0,0,0,0,0,0];
         // this.memory = [9,32768,32769,4,19,32768];
-        this.memory = [];
+         this.memory = [];
 
-        // console.log(buf.length);
+        // // console.log(buf.length);
         for (let index = 0; index < buf.length / 2; index+=2) {
             // const element = memoryBuffer.readInt15LE(index);
             var firstHalf = buf.readUInt8(index); // 4294967295
@@ -27,14 +27,9 @@ class State {
     }
 
     read = (address: number) => {
-
-        const addPtr = address;
+        const addPtr = address ;
         const value = this.memory[addPtr];
-
-        // console.log(addPtr);
-       
-        if (value >= 32768 && value <= 32775){
-            // console.log(`accessing register ${value - 32768} > ${this.register[value - 32768]}` )
+        if (value >= 32768 && value <= 32775) {
             return this.register[value - 32768];
         }
         return value;
@@ -45,7 +40,7 @@ console.log();
 
 const tick = (state: State): State => {
 
-    if (state.ptr > state.memory.length) {
+    if (state.ptr > state.buf.length) {
         console.log('EOF');
         return { ...state, ptr: -1 }; 
     }
@@ -55,12 +50,15 @@ const tick = (state: State): State => {
     const arg2 = state.read(state.ptr + 2);
     const arg3 = state.read(state.ptr + 3);
     
-    log(cmd);
-    // console.log(cmd,arg1,arg2,arg3);
-
     switch (cmd) {
         case 0: // halt
             return { ...state, ptr: -1 }; 
+        
+        case 1: // set
+            state.register.splice(state.ptr-32768, 1, arg2);
+            return { ...state,  
+                // register: state.register.splice(arg1, 1, arg2), 
+                ptr: state.ptr + 3}; 
 
         case 6: // jmp
             return { ...state, ptr: arg1 }; 
@@ -75,9 +73,11 @@ const tick = (state: State): State => {
             // add: 9 a b c
             // assign into <a> the sum of <b> and <c> (modulo 32768)
             
-            const write = state.register;
-            write[arg1] = arg2 + arg3;
-            return { ...state, register: write, ptr: state.ptr + 4 }; 
+            // const write = state.register;
+            // write[arg1] = (arg2 + arg3) % 32768;
+            state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
+            return { ...state, 
+                ptr: state.ptr + 4 }; 
 
         case 19:  // out
             print(arg1);
@@ -87,7 +87,7 @@ const tick = (state: State): State => {
             return { ...state, ptr: state.ptr + 1 }; 
 
         default:
-            console.log(` *** COMMAND MISSING : ${cmd}`);
+            console.log(` *** COMMAND MISSING *** : ${cmd}`);
             break;
     }
 
@@ -96,20 +96,13 @@ const tick = (state: State): State => {
     
 let state = new State(readfile('challenge.bin'));
 
-// let x = 0;
-// while(true) {
-//     let xx = state.read(x);
-// // // if (xx >= 32768) console.log(xx);
-//     x+=2;
-// // //  if (x==30000) break;
-// }
-
 while(true) {
     state = tick(state);
     if (state.ptr < 0) break;
+    // console.log(state.register);
 }
 
-console.log(state.register);
+// console.log(state.register);
 console.log('-- end --');
 
 // 1 : OKjvrkoklplG
