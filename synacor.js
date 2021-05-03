@@ -77,7 +77,14 @@ var tick = function (state) {
             state.register.splice(popWrite, 1, pop);
             return __assign(__assign({}, state), { stack: rem, ptr: state.ptr + 2 });
         case 4: // eq
-            var set = arg2 === arg3 ? 1 : 0;
+            var eqset = arg2 === arg3 ? 1 : 0;
+            var eq = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(eq, 1, eqset);
+            return __assign(__assign({}, state), { ptr: state.ptr + 4 });
+        // gt: 5 a b c
+        // set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
+        case 5: // gt
+            var set = arg2 > arg3 ? 1 : 0;
             var register = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
             state.register.splice(register, 1, set);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
