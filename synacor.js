@@ -16,8 +16,7 @@ var State = /** @class */ (function () {
     function State(buf) {
         var _this = this;
         this.read = function (address) {
-            var addPtr = address;
-            var value = _this.memory[addPtr];
+            var value = _this.buf.readUInt16LE(address * 2);
             if (value >= 32768 && value <= 32775) {
                 return _this.register[value - 32768];
             }
@@ -26,17 +25,6 @@ var State = /** @class */ (function () {
         this.ptr = 0;
         this.buf = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
-        // this.memory = [9,32768,32769,4,19,32768];
-        this.memory = [];
-        // // console.log(buf.length);
-        for (var index = 0; index < buf.length / 2; index += 2) {
-            // const element = memoryBuffer.readInt15LE(index);
-            var firstHalf = buf.readUInt8(index); // 4294967295
-            var secondHalf = buf.readUInt8(index + 1); // 4294967295
-            var t = (secondHalf << 8) + firstHalf;
-            // console.log(firstHalf,secondHalf,'=',t);    
-            this.memory.push(t);
-        }
     }
     return State;
 }());
@@ -55,9 +43,7 @@ var tick = function (state) {
             return __assign(__assign({}, state), { ptr: -1 });
         case 1: // set
             state.register.splice(state.ptr - 32768, 1, arg2);
-            return __assign(__assign({}, state), { 
-                // register: state.register.splice(arg1, 1, arg2), 
-                ptr: state.ptr + 3 });
+            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         case 6: // jmp
             return __assign(__assign({}, state), { ptr: arg1 });
         case 7: // jt
@@ -65,10 +51,6 @@ var tick = function (state) {
         case 8: // jf
             return __assign(__assign({}, state), { ptr: arg1 === 0 ? arg2 : state.ptr + 3 });
         case 9:
-            // add: 9 a b c
-            // assign into <a> the sum of <b> and <c> (modulo 32768)
-            // const write = state.register;
-            // write[arg1] = (arg2 + arg3) % 32768;
             state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 19: // out

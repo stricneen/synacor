@@ -1,34 +1,18 @@
 import { readfile, log, print } from './io';
 
 class State {
-     ptr: number;
-     buf: Buffer;
-     register: number[];
-    memory: number[];
+    public buf: Buffer;
+    public ptr: number;
+    public register: number[];
 
     constructor(buf: Buffer) {
         this.ptr = 0;
         this.buf = buf;
         this.register = [0,0,0,0,0,0,0,0];
-        // this.memory = [9,32768,32769,4,19,32768];
-         this.memory = [];
-
-        // // console.log(buf.length);
-        for (let index = 0; index < buf.length / 2; index+=2) {
-            // const element = memoryBuffer.readInt15LE(index);
-            var firstHalf = buf.readUInt8(index); // 4294967295
-            var secondHalf = buf.readUInt8(index + 1); // 4294967295
-            const t = (secondHalf << 8) + firstHalf;
-            // console.log(firstHalf,secondHalf,'=',t);    
-            this.memory.push(t);
-        }
-
-        
     }
 
     read = (address: number) => {
-        const addPtr = address ;
-        const value = this.memory[addPtr];
+        const value = this.buf.readUInt16LE(address * 2);
         if (value >= 32768 && value <= 32775) {
             return this.register[value - 32768];
         }
@@ -57,7 +41,6 @@ const tick = (state: State): State => {
         case 1: // set
             state.register.splice(state.ptr-32768, 1, arg2);
             return { ...state,  
-                // register: state.register.splice(arg1, 1, arg2), 
                 ptr: state.ptr + 3}; 
 
         case 6: // jmp
@@ -69,12 +52,7 @@ const tick = (state: State): State => {
         case 8: // jf
             return { ...state, ptr: arg1 === 0 ? arg2 : state.ptr + 3 }; 
                  
-        case 9:
-            // add: 9 a b c
-            // assign into <a> the sum of <b> and <c> (modulo 32768)
-            
-            // const write = state.register;
-            // write[arg1] = (arg2 + arg3) % 32768;
+        case 9: // add
             state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
             return { ...state, 
                 ptr: state.ptr + 4 }; 
