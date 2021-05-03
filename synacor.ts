@@ -39,6 +39,8 @@ const tick = (state: State): State => {
     const arg2 = state.read(state.ptr + 2);
     const arg3 = state.read(state.ptr + 3);
     
+    // console.log(cmd,arg1,arg2,arg3);
+    
     switch (cmd) {
         case 0: // halt
             return { ...state, ptr: -1 };
@@ -103,6 +105,15 @@ const tick = (state: State): State => {
             const or = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
             state.register.splice(or, 1, bwor);
             return { ...state, ptr: state.ptr + 4 };
+
+        case 14: // not
+            const bin = (arg2).toString(2).padStart(15, "0");
+            const dec = [...bin].map(x => x==="0" ? "1" : "0").join('');
+            const bwnot = parseInt(dec, 2);
+
+            const not = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(not, 1, bwnot);
+            return { ...state, ptr: state.ptr + 3 };
 
         case 19:  // out
             print(arg1);

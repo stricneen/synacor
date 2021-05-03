@@ -63,6 +63,7 @@ var tick = function (state) {
     var arg1 = state.read(state.ptr + 1);
     var arg2 = state.read(state.ptr + 2);
     var arg3 = state.read(state.ptr + 3);
+    // console.log(cmd,arg1,arg2,arg3);
     switch (cmd) {
         case 0: // halt
             return __assign(__assign({}, state), { ptr: -1 });
@@ -105,6 +106,16 @@ var tick = function (state) {
             var or = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
             state.register.splice(or, 1, bwor);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
+        case 14: // not
+            console.log(arg2);
+            console.log(~arg2);
+            var bin = (arg2).toString(2).padStart(15, "0");
+            var dec = __spread(bin).map(function (x) { return x === "0" ? "1" : "0"; }).join('');
+            var bwnot = parseInt(dec, 2);
+            // const bwnot = ~arg2;
+            var not = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(not, 1, bwnot);
+            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         case 19: // out
             io_1.print(arg1);
             return __assign(__assign({}, state), { ptr: state.ptr + 2 });
