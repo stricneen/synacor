@@ -73,9 +73,6 @@ const tick = (state: State): State => {
             state.register.splice(eq, 1, eqset);
             return { ...state, ptr: state.ptr + 4 };
 
-        // gt: 5 a b c
-        // set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
-
         case 5: // gt
             const set = arg2 > arg3 ? 1 : 0;
             const register = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
@@ -93,6 +90,18 @@ const tick = (state: State): State => {
 
         case 9: // add
             state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
+            return { ...state, ptr: state.ptr + 4 };
+
+        case 12: // and
+            const bwand = arg2 & arg3;
+            const and = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(and, 1, bwand);
+            return { ...state, ptr: state.ptr + 4 };
+       
+        case 13: // or
+            const bwor = arg2 | arg3;
+            const or = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(or, 1, bwor);
             return { ...state, ptr: state.ptr + 4 };
 
         case 19:  // out

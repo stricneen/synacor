@@ -81,8 +81,6 @@ var tick = function (state) {
             var eq = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
             state.register.splice(eq, 1, eqset);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
-        // gt: 5 a b c
-        // set <a> to 1 if <b> is greater than <c>; set it to 0 otherwise
         case 5: // gt
             var set = arg2 > arg3 ? 1 : 0;
             var register = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
@@ -96,6 +94,16 @@ var tick = function (state) {
             return __assign(__assign({}, state), { ptr: arg1 === 0 ? arg2 : state.ptr + 3 });
         case 9: // add
             state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
+            return __assign(__assign({}, state), { ptr: state.ptr + 4 });
+        case 12: // and
+            var bwand = arg2 & arg3;
+            var and = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(and, 1, bwand);
+            return __assign(__assign({}, state), { ptr: state.ptr + 4 });
+        case 13: // or
+            var bwor = arg2 | arg3;
+            var or = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(or, 1, bwor);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 19: // out
             io_1.print(arg1);
