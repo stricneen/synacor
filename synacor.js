@@ -69,13 +69,9 @@ var tick = function (state) {
         case 1: // set
             state.register.splice(state.ptr - 32768, 1, arg2);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
-        // push: 2 a
-        //   push <a> onto the stack
-        case 2:
+        case 2: // push
             return __assign(__assign({}, state), { stack: __spread([arg1], state.stack), ptr: state.ptr + 2 });
-        // pop: 3 a
-        //   remove the top element from the stack and write it into <a>; empty stack = error
-        case 3:
+        case 3: // pop
             var _a = __read(state.stack), pop = _a[0], rem = _a.slice(1);
             var popWrite = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
             state.register.splice(popWrite, 1, pop);
