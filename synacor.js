@@ -10,31 +10,56 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
+var __read = (this && this.__read) || function (o, n) {
+    var m = typeof Symbol === "function" && o[Symbol.iterator];
+    if (!m) return o;
+    var i = m.call(o), r, ar = [], e;
+    try {
+        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
+    }
+    catch (error) { e = { error: error }; }
+    finally {
+        try {
+            if (r && !r.done && (m = i["return"])) m.call(i);
+        }
+        finally { if (e) throw e.error; }
+    }
+    return ar;
+};
+var __spread = (this && this.__spread) || function () {
+    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
+    return ar;
+};
 exports.__esModule = true;
 var io_1 = require("./io");
 var State = /** @class */ (function () {
     function State(buf) {
         var _this = this;
         this.read = function (address) {
-            var value = _this.buf.readUInt16LE(address * 2);
+            var value = _this.buffer.readUInt16LE(address * 2);
+            // console.log('val', value);
             if (value >= 32768 && value <= 32775) {
+                // console.log(`REG(${value-32768}) = ${this.register[value - 32768]}`)
                 return _this.register[value - 32768];
             }
             return value;
         };
         this.ptr = 0;
-        this.buf = buf;
+        this.buffer = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
+        this.stack = [];
     }
     return State;
 }());
 console.log();
 var tick = function (state) {
-    if (state.ptr > state.buf.length) {
+    if (state.ptr > state.buffer.length) {
         console.log('EOF');
         return __assign(__assign({}, state), { ptr: -1 });
     }
+    // console.log();console.log();
     var cmd = state.read(state.ptr);
+    // log(cmd);
     var arg1 = state.read(state.ptr + 1);
     var arg2 = state.read(state.ptr + 2);
     var arg3 = state.read(state.ptr + 3);
@@ -44,13 +69,29 @@ var tick = function (state) {
         case 1: // set
             state.register.splice(state.ptr - 32768, 1, arg2);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
+        // push: 2 a
+        //   push <a> onto the stack
+        case 2:
+            return __assign(__assign({}, state), { stack: __spread([arg1], state.stack), ptr: state.ptr + 2 });
+        // pop: 3 a
+        //   remove the top element from the stack and write it into <a>; empty stack = error
+        case 3:
+            var _a = __read(state.stack), pop = _a[0], rem = _a.slice(1);
+            var popWrite = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(popWrite, 1, pop);
+            return __assign(__assign({}, state), { stack: rem, ptr: state.ptr + 2 });
+        case 4: // eq
+            var set = arg2 === arg3 ? 1 : 0;
+            var register = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(register, 1, set);
+            return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 6: // jmp
             return __assign(__assign({}, state), { ptr: arg1 });
         case 7: // jt
             return __assign(__assign({}, state), { ptr: arg1 === 0 ? state.ptr + 3 : arg2 });
         case 8: // jf
             return __assign(__assign({}, state), { ptr: arg1 === 0 ? arg2 : state.ptr + 3 });
-        case 9:
+        case 9: // add
             state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 19: // out

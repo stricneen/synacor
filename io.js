@@ -31,9 +31,15 @@ var log = function (num) {
         case 5:
             debug('gt');
             break;
-        // case 6: debug('jmp'); break;
-        // case 7: debug('jt'); break;
-        // case 8: debug('jf'); break;
+        case 6:
+            debug('jmp');
+            break;
+        case 7:
+            debug('jt');
+            break;
+        case 8:
+            debug('jf');
+            break;
         case 9:
             debug('add');
             break;
@@ -68,7 +74,9 @@ var log = function (num) {
         case 20:
             debug('in');
             break;
-        // case 21: debug('noop'); break;
+        case 21:
+            debug('noop');
+            break;
     }
 };
 exports.log = log;

@@ -20,9 +20,9 @@ export const log = (num: number) => {
         case 3: debug('pop'); break;
         case 4: debug('eq'); break;
         case 5: debug('gt'); break;
-        // case 6: debug('jmp'); break;
-        // case 7: debug('jt'); break;
-        // case 8: debug('jf'); break;
+        case 6: debug('jmp'); break;
+        case 7: debug('jt'); break;
+        case 8: debug('jf'); break;
         case 9: debug('add'); break;
         case 10: debug('mult'); break;
         case 11: debug('mod'); break;
@@ -35,6 +35,6 @@ export const log = (num: number) => {
         case 18: debug('ret'); break;
         // case 19: debug('out'); break;
         case 20: debug('in'); break;
-        // case 21: debug('noop'); break;
+        case 21: debug('noop'); break;
     }
 };
