@@ -1,3 +1,4 @@
+import { SSL_OP_CRYPTOPRO_TLSEXT_BUG } from 'constants';
 import { readfile, log, print } from './io';
 
 class State {
@@ -5,12 +6,18 @@ class State {
     public ptr: number;
     public register: number[];
     public stack: number[];
+    public memory: number[];
 
     constructor(buf: Buffer) {
         this.ptr = 0;
         this.buffer = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
+        
+        this.memory = [];
+        for (let i = 0; i < buf.length / 2; i++) {
+            this.memory.push(buf.readInt16LE(i));
+        }
     }
 
     read = (address: number) => {
@@ -21,6 +28,10 @@ class State {
             return this.register[value - 32768];
         }
         return value;
+    }
+
+    write = (address: number, value: number) => {
+        this.buffer[address] = value;
     }
 }
 
@@ -91,8 +102,23 @@ const tick = (state: State): State => {
             return { ...state, ptr: arg1 === 0 ? arg2 : state.ptr + 3 };
 
         case 9: // add
-            state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
+            const add = (arg2 + arg3) % 32768;
+            const addAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(addAddr, 1, add);
             return { ...state, ptr: state.ptr + 4 };
+
+        case 10: // mult
+            const mul = (arg2 * arg3) % 32768;
+            const mulAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(mulAddr, 1, mul);
+            return { ...state, ptr: state.ptr + 4 };
+
+        case 11: // mod
+            const mod = arg2 % arg3;
+            const modAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(modAddr, 1, mod);
+            return { ...state, ptr: state.ptr + 4 };
+
 
         case 12: // and
             const bwand = arg2 & arg3;
@@ -100,6 +126,7 @@ const tick = (state: State): State => {
             state.register.splice(and, 1, bwand);
             return { ...state, ptr: state.ptr + 4 };
        
+
         case 13: // or
             const bwor = arg2 | arg3;
             const or = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
@@ -115,9 +142,40 @@ const tick = (state: State): State => {
             state.register.splice(not, 1, bwnot);
             return { ...state, ptr: state.ptr + 3 };
 
+        case 15: // rmem
+            const read = state.read(arg2);
+            const rmemAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(rmemAddr, 1, read);
+            return { ...state, ptr: state.ptr + 3 };
+
+        case 16: // rmem
+            const write = state.read(arg2);
+            state.write(write, arg3)
+            return { ...state, ptr: state.ptr + 3 };
+            
+// rmem: 15 a b
+// read memory at address <b> and write it to <a>
+
+// wmem: 16 a b
+// write the value from <b> into memory at address <a>
+
+        case 17: // call
+            return {
+                ...state,
+                stack: [state.ptr + 2 , ...state.stack],
+                ptr: arg1
+            };
+
+// ret: 18
+// remove the top element from the stack and jump to it; empty stack = halt
+
         case 19:  // out
             print(arg1);
             return { ...state, ptr: state.ptr + 2 };
+
+// in: 20 a
+// read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
+
 
         case 21: // noop
             return { ...state, ptr: state.ptr + 1 };

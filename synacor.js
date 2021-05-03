@@ -44,10 +44,17 @@ var State = /** @class */ (function () {
             }
             return value;
         };
+        this.write = function (address, value) {
+            _this.buffer[address] = value;
+        };
         this.ptr = 0;
         this.buffer = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
+        this.memory = [];
+        for (var i = 0; i < buf.length / 2; i++) {
+            this.memory.push(buf.readInt16LE(i));
+        }
     }
     return State;
 }());
@@ -94,7 +101,19 @@ var tick = function (state) {
         case 8: // jf
             return __assign(__assign({}, state), { ptr: arg1 === 0 ? arg2 : state.ptr + 3 });
         case 9: // add
-            state.register.splice(arg1, 1, (arg2 + arg3) % 32768);
+            var add = (arg2 + arg3) % 32768;
+            var addAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(addAddr, 1, add);
+            return __assign(__assign({}, state), { ptr: state.ptr + 4 });
+        case 10: // mult
+            var mul = (arg2 * arg3) % 32768;
+            var mulAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(mulAddr, 1, mul);
+            return __assign(__assign({}, state), { ptr: state.ptr + 4 });
+        case 11: // mod
+            var mod = arg2 % arg3;
+            var modAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(modAddr, 1, mod);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 12: // and
             var bwand = arg2 & arg3;
@@ -107,18 +126,34 @@ var tick = function (state) {
             state.register.splice(or, 1, bwor);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 14: // not
-            console.log(arg2);
-            console.log(~arg2);
             var bin = (arg2).toString(2).padStart(15, "0");
             var dec = __spread(bin).map(function (x) { return x === "0" ? "1" : "0"; }).join('');
             var bwnot = parseInt(dec, 2);
-            // const bwnot = ~arg2;
             var not = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
             state.register.splice(not, 1, bwnot);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
+        case 15: // rmem
+            var read = state.read(arg2);
+            var rmemAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            state.register.splice(rmemAddr, 1, read);
+            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
+        case 16: // rmem
+            var write = state.read(arg2);
+            state.write(write, arg3);
+            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
+        // rmem: 15 a b
+        // read memory at address <b> and write it to <a>
+        // wmem: 16 a b
+        // write the value from <b> into memory at address <a>
+        case 17: // call
+            return __assign(__assign({}, state), { stack: __spread([state.ptr + 2], state.stack), ptr: arg1 });
+        // ret: 18
+        // remove the top element from the stack and jump to it; empty stack = halt
         case 19: // out
             io_1.print(arg1);
             return __assign(__assign({}, state), { ptr: state.ptr + 2 });
+        // in: 20 a
+        // read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
         case 21: // noop
             return __assign(__assign({}, state), { ptr: state.ptr + 1 });
         default:
