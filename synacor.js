@@ -37,23 +37,28 @@ var State = /** @class */ (function () {
         var _this = this;
         this.read = function (address) {
             var value = _this.buffer.readUInt16LE(address * 2);
-            // console.log('val', value);
+            var value2 = _this.memory[address];
             if (value >= 32768 && value <= 32775) {
                 // console.log(`REG(${value-32768}) = ${this.register[value - 32768]}`)
                 return _this.register[value - 32768];
             }
             return value;
         };
-        this.write = function (address, value) {
-            _this.buffer[address] = value;
+        this.read2 = function (address) {
+            // return this.memory[address] - 32768;
+            return state.buffer.readUInt16LE((address) * 2) - 32768;
         };
         this.ptr = 0;
         this.buffer = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
         this.memory = [];
-        for (var i = 0; i < buf.length / 2; i++) {
-            this.memory.push(buf.readInt16LE(i));
+        for (var i = 0; i < buf.length; i += 2) {
+            var l = buf.readUInt8(i);
+            var h = buf.readUInt8(i + 1) & 0x7FFF;
+            var v = (h << 7) + l;
+            // console.log(h.toString(2),l.toString(2),v);
+            this.memory.push(v);
         }
     }
     return State;
@@ -81,17 +86,17 @@ var tick = function (state) {
             return __assign(__assign({}, state), { stack: __spread([arg1], state.stack), ptr: state.ptr + 2 });
         case 3: // pop
             var _a = __read(state.stack), pop = _a[0], rem = _a.slice(1);
-            var popWrite = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var popWrite = state.read2(state.ptr + 1);
             state.register.splice(popWrite, 1, pop);
             return __assign(__assign({}, state), { stack: rem, ptr: state.ptr + 2 });
         case 4: // eq
             var eqset = arg2 === arg3 ? 1 : 0;
-            var eq = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var eq = state.read2(state.ptr + 1);
             state.register.splice(eq, 1, eqset);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 5: // gt
             var set = arg2 > arg3 ? 1 : 0;
-            var register = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var register = state.read2(state.ptr + 1);
             state.register.splice(register, 1, set);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 6: // jmp
@@ -102,49 +107,49 @@ var tick = function (state) {
             return __assign(__assign({}, state), { ptr: arg1 === 0 ? arg2 : state.ptr + 3 });
         case 9: // add
             var add = (arg2 + arg3) % 32768;
-            var addAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var addAddr = state.read2(state.ptr + 1);
             state.register.splice(addAddr, 1, add);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 10: // mult
             var mul = (arg2 * arg3) % 32768;
-            var mulAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var mulAddr = state.read2(state.ptr + 1);
             state.register.splice(mulAddr, 1, mul);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 11: // mod
             var mod = arg2 % arg3;
-            var modAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var modAddr = state.read2(state.ptr + 1);
             state.register.splice(modAddr, 1, mod);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 12: // and
             var bwand = arg2 & arg3;
-            var and = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var and = state.read2(state.ptr + 1);
             state.register.splice(and, 1, bwand);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 13: // or
             var bwor = arg2 | arg3;
-            var or = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var or = state.read2(state.ptr + 1);
             state.register.splice(or, 1, bwor);
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 14: // not
             var bin = (arg2).toString(2).padStart(15, "0");
             var dec = __spread(bin).map(function (x) { return x === "0" ? "1" : "0"; }).join('');
             var bwnot = parseInt(dec, 2);
-            var not = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
+            var not = state.read2(state.ptr + 1);
             state.register.splice(not, 1, bwnot);
-            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
-        case 15: // rmem
-            var read = state.read(arg2);
-            var rmemAddr = state.buffer.readUInt16LE((state.ptr + 1) * 2) - 32768;
-            state.register.splice(rmemAddr, 1, read);
-            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
-        case 16: // rmem
-            var write = state.read(arg2);
-            state.write(write, arg3);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         // rmem: 15 a b
         // read memory at address <b> and write it to <a>
+        case 15: // rmem
+            var read = state.read(arg2);
+            var rmemAddr = state.read2(state.ptr + 1);
+            state.register.splice(rmemAddr, 1, read);
+            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         // wmem: 16 a b
         // write the value from <b> into memory at address <a>
+        case 16: // wmem
+            var write = state.read(arg2);
+            // state.write(write, arg3)
+            return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         case 17: // call
             return __assign(__assign({}, state), { stack: __spread([state.ptr + 2], state.stack), ptr: arg1 });
         // ret: 18
