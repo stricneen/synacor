@@ -14,12 +14,10 @@ class State {
         this.stack = [];
         this.memory = [];
         for (let i = 0; i < buf.length ; i+=2) {
-
             const l = buf.readUInt8(i);
             const h = buf.readUInt8(i+1) & 0x7FFF;
             const v = (h << 7) + l;
             // console.log(h.toString(2),l.toString(2),v);
-            
             this.memory.push(v);
         }            
     }
