@@ -36,28 +36,23 @@ var State = /** @class */ (function () {
     function State(buf) {
         var _this = this;
         this.read = function (address) {
-            var value = _this.buffer.readUInt16LE(address * 2);
-            var value2 = _this.memory[address];
+            var value = _this.memory[address];
             if (value >= 32768 && value <= 32775) {
-                // console.log(`REG(${value-32768}) = ${this.register[value - 32768]}`)
                 return _this.register[value - 32768];
             }
             return value;
         };
         this.read2 = function (address) {
-            // return this.memory[address] - 32768;
-            return state.buffer.readUInt16LE((address) * 2) - 32768;
+            return _this.memory[address] - 32768;
         };
         this.ptr = 0;
-        this.buffer = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
         this.memory = [];
         for (var i = 0; i < buf.length; i += 2) {
             var l = buf.readUInt8(i);
             var h = buf.readUInt8(i + 1) & 0x7FFF;
-            var v = (h << 7) + l;
-            // console.log(h.toString(2),l.toString(2),v);
+            var v = (h << 8) + l;
             this.memory.push(v);
         }
     }
@@ -65,7 +60,7 @@ var State = /** @class */ (function () {
 }());
 console.log();
 var tick = function (state) {
-    if (state.ptr > state.buffer.length) {
+    if (state.ptr > state.memory.length) {
         console.log('EOF');
         return __assign(__assign({}, state), { ptr: -1 });
     }
@@ -144,11 +139,18 @@ var tick = function (state) {
             var rmemAddr = state.read2(state.ptr + 1);
             state.register.splice(rmemAddr, 1, read);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
+        //                  <a>  <b>
+        //          16      843 30000          
+        //                       3919
         // wmem: 16 a b
         // write the value from <b> into memory at address <a>
         case 16: // wmem
+            var pos = state.read(arg1);
             var write = state.read(arg2);
+            console.log(cmd, arg1, arg2, pos, write);
             // state.write(write, arg3)
+            // console.log(state.)
+            state.memory.splice(pos, 1, write);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         case 17: // call
             return __assign(__assign({}, state), { stack: __spread([state.ptr + 2], state.stack), ptr: arg1 });

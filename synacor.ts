@@ -1,7 +1,6 @@
 import { readfile, log, print } from './io';
 
 class State {
-    public buffer: Buffer;
     public ptr: number;
     public register: number[];
     public stack: number[];
@@ -9,44 +8,35 @@ class State {
 
     constructor(buf: Buffer) {
         this.ptr = 0;
-        this.buffer = buf;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
         this.memory = [];
         for (let i = 0; i < buf.length ; i+=2) {
             const l = buf.readUInt8(i);
             const h = buf.readUInt8(i+1) & 0x7FFF;
-            const v = (h << 7) + l;
-            // console.log(h.toString(2),l.toString(2),v);
+            const v = (h << 8) + l;
             this.memory.push(v);
         }            
     }
 
     read = (address: number) => {
-        const value = this.buffer.readUInt16LE(address * 2);
-        const value2 = this.memory[address];
+        const value = this.memory[address];
         if (value >= 32768 && value <= 32775) {
-            // console.log(`REG(${value-32768}) = ${this.register[value - 32768]}`)
             return this.register[value - 32768];
         }
         return value;
     }
 
     read2 = (address: number) => {
-       // return this.memory[address] - 32768;
-        return state.buffer.readUInt16LE((address) * 2) - 32768;
+        return this.memory[address] - 32768;
     }
- 
-    // write = (address: number, value: number) => {
-    //     this.buffer[address] = value;
-    // }
 }
 
 console.log();
 
 const tick = (state: State): State => {
 
-    if (state.ptr > state.buffer.length) {
+    if (state.ptr > state.memory.length) {
         console.log('EOF');
         return { ...state, ptr: -1 };
     }
@@ -153,19 +143,31 @@ const tick = (state: State): State => {
             state.register.splice(rmemAddr, 1, read);
             return { ...state, ptr: state.ptr + 3 };
 
+    //                  <a>  <b>
+    //          16      843 30000          
+
+    //                       3919
 
         // wmem: 16 a b
         // write the value from <b> into memory at address <a>
         case 16: // wmem
+            const pos = state.read(arg1);
             const write = state.read(arg2);
+            console.log(cmd,arg1,arg2,pos, write);
             // state.write(write, arg3)
-            return { ...state, ptr: state.ptr + 3 };
+           // console.log(state.)
+            state.memory.splice(pos, 1, write);
+            return { 
+                ...state, 
+
+                ptr: state.ptr + 3 
+            };
             
 
         case 17: // call
             return {
                 ...state,
-                stack: [state.ptr + 2 , ...state.stack],
+                stack: [state.ptr + 2, ...state.stack],
                 ptr: arg1
             };
 
