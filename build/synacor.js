@@ -16,7 +16,8 @@ const tick = (state) => {
     const arg2 = state.read(state.ptr + 2);
     const arg3 = state.read(state.ptr + 3);
     //  log(cmd);
-    console.log(cmd, arg1, arg2, arg3);
+    //  console.log(cmd,arg1,arg2,arg3);
+    io_1.printCommand(state);
     switch (cmd) {
         case 0: // halt
             return { ...state, ptr: -1 };

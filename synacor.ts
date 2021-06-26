@@ -1,4 +1,4 @@
-import { readfile, log, print } from './io';
+import { readfile, log, print, printCommand } from './io';
 import { State } from './state';
 
 console.log();
@@ -21,8 +21,10 @@ const tick = (state: State): State => {
     const arg3 = state.read(state.ptr + 3);
     
     //  log(cmd);
-     console.log(cmd,arg1,arg2,arg3);
+    //  console.log(cmd,arg1,arg2,arg3);
     
+     printCommand(state);
+
     switch (cmd) {
         case 0: // halt
             return { ...state, ptr: -1 };

@@ -13,7 +13,7 @@
     "@types/node": "^14.14.20"
   },
   "scripts": {
-    "run": "tsc --project ./tsconfig.json && node synacor.js",
+    "run": "tsc --project ./tsconfig.json && node ./build/synacor.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
