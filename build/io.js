@@ -1,19 +1,38 @@
 "use strict";
-exports.__esModule = true;
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
+Object.defineProperty(exports, "__esModule", { value: true });
 exports.log = exports.printCommand = exports.print = exports.readfile = void 0;
-var fs_1 = require("fs");
-var path = require("path");
-var debug = function (msg) { return console.log(msg); };
-var readfile = function (fn) {
-    var fp = path.join(__dirname, "./" + fn);
+const fs_1 = require("fs");
+const path = __importStar(require("path"));
+const debug = (msg) => console.log(msg);
+const readfile = (fn) => {
+    const fp = path.join(__dirname, `./${fn}`);
     return fs_1.readFileSync(fp);
 };
 exports.readfile = readfile;
-var print = function (ascii) {
+const print = (ascii) => {
     process.stdout.write(String.fromCharCode(ascii));
 };
 exports.print = print;
-var commands = [
+const commands = [
     { name: 'halt', params: 0 },
     { name: 'set', params: 2 },
     { name: 'push', params: 1 },
@@ -37,15 +56,15 @@ var commands = [
     { name: 'in', params: 1 },
     { name: 'noop', params: 0 },
 ];
-var printCommand = function (state) {
-    var cmd = state.read(state.ptr);
-    var arg1 = state.read(state.ptr + 1);
-    var arg2 = state.read(state.ptr + 2);
-    var arg3 = state.read(state.ptr + 3);
+const printCommand = (state) => {
+    const cmd = state.read(state.ptr);
+    const arg1 = state.read(state.ptr + 1);
+    const arg2 = state.read(state.ptr + 2);
+    const arg3 = state.read(state.ptr + 3);
     console.log(commands[cmd].name);
 };
 exports.printCommand = printCommand;
-var log = function (num) {
+const log = (num) => {
     switch (num) {
         // case 0: debug('halt'); break;
         case 1:

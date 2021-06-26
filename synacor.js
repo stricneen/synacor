@@ -10,67 +10,31 @@ var __assign = (this && this.__assign) || function () {
     };
     return __assign.apply(this, arguments);
 };
-var __read = (this && this.__read) || function (o, n) {
-    var m = typeof Symbol === "function" && o[Symbol.iterator];
-    if (!m) return o;
-    var i = m.call(o), r, ar = [], e;
-    try {
-        while ((n === void 0 || n-- > 0) && !(r = i.next()).done) ar.push(r.value);
-    }
-    catch (error) { e = { error: error }; }
-    finally {
-        try {
-            if (r && !r.done && (m = i["return"])) m.call(i);
-        }
-        finally { if (e) throw e.error; }
-    }
-    return ar;
-};
-var __spread = (this && this.__spread) || function () {
-    for (var ar = [], i = 0; i < arguments.length; i++) ar = ar.concat(__read(arguments[i]));
-    return ar;
+var __spreadArrays = (this && this.__spreadArrays) || function () {
+    for (var s = 0, i = 0, il = arguments.length; i < il; i++) s += arguments[i].length;
+    for (var r = Array(s), k = 0, i = 0; i < il; i++)
+        for (var a = arguments[i], j = 0, jl = a.length; j < jl; j++, k++)
+            r[k] = a[j];
+    return r;
 };
 exports.__esModule = true;
 var io_1 = require("./io");
-var State = /** @class */ (function () {
-    function State(buf) {
-        var _this = this;
-        this.read = function (address) {
-            var value = _this.memory[address];
-            if (value >= 32768 && value <= 32775) {
-                return _this.register[value - 32768];
-            }
-            return value;
-        };
-        this.read2 = function (address) {
-            return _this.memory[address] - 32768;
-        };
-        this.ptr = 0;
-        this.register = [0, 0, 0, 0, 0, 0, 0, 0];
-        this.stack = [];
-        this.memory = [];
-        for (var i = 0; i < buf.length; i += 2) {
-            var l = buf.readUInt8(i);
-            var h = buf.readUInt8(i + 1) & 0x7FFF;
-            var v = (h << 8) + l;
-            this.memory.push(v);
-        }
-    }
-    return State;
-}());
+var state_1 = require("./state");
 console.log();
+var surr = function (address, memory) {
+    console.log(memory[address - 3], memory[address - 2], memory[address - 1], memory[address], memory[address + 1], memory[address + 2], memory[address + 3]);
+};
 var tick = function (state) {
     if (state.ptr > state.memory.length) {
         console.log('EOF');
         return __assign(__assign({}, state), { ptr: -1 });
     }
-    // console.log();console.log();
     var cmd = state.read(state.ptr);
-    // log(cmd);
     var arg1 = state.read(state.ptr + 1);
     var arg2 = state.read(state.ptr + 2);
     var arg3 = state.read(state.ptr + 3);
-    // console.log(cmd,arg1,arg2,arg3);
+    //  log(cmd);
+    console.log(cmd, arg1, arg2, arg3);
     switch (cmd) {
         case 0: // halt
             return __assign(__assign({}, state), { ptr: -1 });
@@ -78,9 +42,9 @@ var tick = function (state) {
             state.register.splice(state.ptr - 32768, 1, arg2);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
         case 2: // push
-            return __assign(__assign({}, state), { stack: __spread([arg1], state.stack), ptr: state.ptr + 2 });
+            return __assign(__assign({}, state), { stack: __spreadArrays([arg1], state.stack), ptr: state.ptr + 2 });
         case 3: // pop
-            var _a = __read(state.stack), pop = _a[0], rem = _a.slice(1);
+            var _a = state.stack, pop = _a[0], rem = _a.slice(1);
             var popWrite = state.read2(state.ptr + 1);
             state.register.splice(popWrite, 1, pop);
             return __assign(__assign({}, state), { stack: rem, ptr: state.ptr + 2 });
@@ -127,7 +91,7 @@ var tick = function (state) {
             return __assign(__assign({}, state), { ptr: state.ptr + 4 });
         case 14: // not
             var bin = (arg2).toString(2).padStart(15, "0");
-            var dec = __spread(bin).map(function (x) { return x === "0" ? "1" : "0"; }).join('');
+            var dec = __spreadArrays(bin).map(function (x) { return x === "0" ? "1" : "0"; }).join('');
             var bwnot = parseInt(dec, 2);
             var not = state.read2(state.ptr + 1);
             state.register.splice(not, 1, bwnot);
@@ -139,44 +103,46 @@ var tick = function (state) {
             var rmemAddr = state.read2(state.ptr + 1);
             state.register.splice(rmemAddr, 1, read);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
-        //                  <a>  <b>
-        //          16      843 30000          
-        //                       3919
         // wmem: 16 a b
         // write the value from <b> into memory at address <a>
         case 16: // wmem
-            var pos = state.read(arg1);
-            var write = state.read(arg2);
-            console.log(cmd, arg1, arg2, pos, write);
-            // state.write(write, arg3)
-            // console.log(state.)
-            state.memory.splice(pos, 1, write);
+            state.memory.splice(arg1, 1, arg2);
             return __assign(__assign({}, state), { ptr: state.ptr + 3 });
+        // call: 17 a
+        // write the address of the next instruction to the stack and jump to <a>
         case 17: // call
-            return __assign(__assign({}, state), { stack: __spread([state.ptr + 2], state.stack), ptr: arg1 });
-        // ret: 18
-        // remove the top element from the stack and jump to it; empty stack = halt
+            return __assign(__assign({}, state), { stack: __spreadArrays([state.ptr + 2], state.stack), ptr: arg1 });
+        case 18: // ret
+            var _b = state.stack, ret = _b[0], rstack = _b.slice(1);
+            return __assign(__assign({}, state), { stack: rstack, ptr: ret });
         case 19: // out
             io_1.print(arg1);
             return __assign(__assign({}, state), { ptr: state.ptr + 2 });
         // in: 20 a
         // read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
+        case 20:
+            console.log('=== read ===');
+            return state;
         case 21: // noop
             return __assign(__assign({}, state), { ptr: state.ptr + 1 });
         default:
+            surr(state.ptr, state.memory);
             console.log(" *** COMMAND MISSING *** : " + cmd);
             break;
     }
     return __assign(__assign({}, state), { ptr: state.ptr + 1 });
 };
-var state = new State(io_1.readfile('challenge.bin'));
+var state = new state_1.State(io_1.readfile('challenge.bin'));
+var instructionCount = 0;
 while (true) {
     state = tick(state);
+    instructionCount++;
     if (state.ptr < 0)
         break;
     // console.log(state.register);
 }
 // console.log(state.register);
+console.log('Instructions : ', instructionCount);
 console.log('-- end --');
 // 1 : OKjvrkoklplG
 // 2 : lJsOWtHjOMQj

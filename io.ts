@@ -1,5 +1,6 @@
 import {readFileSync} from 'fs';
 import * as path from 'path';
+import { State } from './state';
 
 const debug = (msg: string) => console.log(msg);
 
@@ -10,6 +11,43 @@ export const readfile = (fn: string) => {
 
 export const print = (ascii: number): void => {
     process.stdout.write(String.fromCharCode(ascii));
+}
+
+
+
+const commands = [
+     { name: 'halt', params: 0},
+     { name: 'set', params: 2},
+     { name: 'push', params: 1},
+     { name: 'pop', params: 1},
+     { name: 'eq', params: 3},
+     { name: 'gt', params: 3},
+     { name: 'jmp', params: 1},
+     { name: 'jt', params: 2},
+     { name: 'jf', params: 2},
+     { name: 'add', params: 3},
+     { name: 'mult', params: 3},
+     { name: 'mod', params: 3},
+     { name: 'and', params: 3},
+     { name: 'or', params: 3},
+     { name: 'not', params: 2},
+     { name: 'rmem', params: 2},
+     { name: 'wmem', params: 2},
+     { name: 'call', params: 1},
+     { name: 'ret', params: 0},
+     { name: 'out', params: 1},
+     { name: 'in', params: 1},
+     { name: 'noop', params: 0},
+];
+
+
+export const printCommand = (state: State) => {
+    const cmd = state.read(state.ptr);
+    const arg1 = state.read(state.ptr + 1);
+    const arg2 = state.read(state.ptr + 2);
+    const arg3 = state.read(state.ptr + 3);
+
+    console.log(commands[cmd].name);
 }
 
 export const log = (num: number) => {
