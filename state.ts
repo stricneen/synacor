@@ -5,11 +5,14 @@ export class State {
     public stack: number[];
     public memory: number[];
 
+    public terminate: number;
+
     constructor(buf: Buffer) {
         this.ptr = 0;
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
         this.memory = [];
+        this.terminate = 2;
         for (let i = 0; i < buf.length ; i+=2) {
             const l = buf.readUInt8(i);
             const h = buf.readUInt8(i+1) & 0x7FFF;
@@ -29,7 +32,6 @@ export class State {
     read2 = (address: number) => {
         return this.memory[address] - 32768;
     }
-
 
     
     // r3 = () => {

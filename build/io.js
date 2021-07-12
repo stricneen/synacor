@@ -59,16 +59,23 @@ const commands = [
 const printCommand = (state) => {
     const cmd = state.read(state.ptr);
     const command = commands.find(c => c.cmd === cmd);
+    if (command === undefined)
+        return;
     const args = [
         state.read(state.ptr + 1),
         state.read(state.ptr + 2),
         state.read(state.ptr + 3),
     ];
+    const raw = [
+        state.memory[state.ptr + 1],
+        state.memory[state.ptr + 2],
+        state.memory[state.ptr + 3],
+    ];
     const opargs = args.slice(0, command?.params);
     const arg1 = state.read(state.ptr + 1);
     const arg2 = state.read(state.ptr + 2);
     const arg3 = state.read(state.ptr + 3);
-    console.log(`${command?.name}\t${opargs}`);
+    console.log(`${command?.name}\t(${state.ptr})\t${opargs}\t\t ${raw} \t\t${state.register} `);
 };
 exports.printCommand = printCommand;
 const log = (num) => {

@@ -17,7 +17,6 @@ const tick = (state) => {
     const arg3 = state.read(state.ptr + 3);
     //  log(cmd);
     //  console.log(cmd,arg1,arg2,arg3);
-    io_1.printCommand(state);
     switch (cmd) {
         case 0: // halt
             return { ...state, ptr: -1 };
@@ -89,14 +88,29 @@ const tick = (state) => {
         // rmem: 15 a b
         // read memory at address <b> and write it to <a>
         case 15: // rmem
-            const read = state.read(arg2);
-            const rmemAddr = state.read2(state.ptr + 1);
-            state.register.splice(rmemAddr, 1, read);
+            const writeAddr = state.memory[state.ptr + 1];
+            const readAddr = state.memory[state.ptr + 2];
+            // console.log(readAddr);
+            // const readMem = state.memory[readAddr];
+            //            const readMemAddr = state.memory[readAddr];
+            const readMem = (readAddr >= 32768 && readAddr <= 32775)
+                ? state.memory[state.register[readAddr - 32768]]
+                : state.memory[readAddr];
+            // console.log(readMem);
+            // console.log(state.memory[readMem]);
+            if (writeAddr >= 32768 && writeAddr <= 32775) {
+                state.register.splice(writeAddr - 32768, 1, readMem);
+                return { ...state, ptr: state.ptr + 3 };
+            }
+            state.memory.splice(writeAddr, 1, state.memory[readMem]);
             return { ...state, ptr: state.ptr + 3 };
         // wmem: 16 a b
         // write the value from <b> into memory at address <a>
         case 16: // wmem
-            state.memory.splice(arg1, 1, arg2);
+            //state.memory.splice(arg1, 1, arg2);
+            const wmemAddr = state.read2(state.ptr + 1);
+            state.register.splice(wmemAddr, 1, arg2);
+            state.terminate--;
             return { ...state, ptr: state.ptr + 3 };
         // call: 17 a
         // write the address of the next instruction to the stack and jump to <a>
@@ -130,8 +144,11 @@ let state = new state_1.State(io_1.readfile('challenge.bin'));
 let instructionCount = 0;
 while (true) {
     state = tick(state);
+    io_1.printCommand(state);
     instructionCount++;
     if (state.ptr < 0)
+        break;
+    if (state.terminate < 0)
         break;
     // console.log(state.register);
 }
