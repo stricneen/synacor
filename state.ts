@@ -12,7 +12,7 @@ export class State {
         this.register = [0, 0, 0, 0, 0, 0, 0, 0];
         this.stack = [];
         this.memory = [];
-        this.terminate = 2;
+        this.terminate = 4;
         for (let i = 0; i < buf.length ; i+=2) {
             const l = buf.readUInt8(i);
             const h = buf.readUInt8(i+1) & 0x7FFF;

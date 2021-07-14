@@ -6,17 +6,21 @@ console.log();
 const surr = (address, memory) => {
     console.log(memory[address - 3], memory[address - 2], memory[address - 1], memory[address], memory[address + 1], memory[address + 2], memory[address + 3]);
 };
+const resolve = (x) => {
+    return (x >= 32768 && x <= 32775) ? state.register[x - 32768] : x;
+};
 const tick = (state) => {
     if (state.ptr > state.memory.length) {
         console.log('EOF');
         return { ...state, ptr: -1 };
     }
     const cmd = state.read(state.ptr);
-    const arg1 = state.read(state.ptr + 1);
-    const arg2 = state.read(state.ptr + 2);
-    const arg3 = state.read(state.ptr + 3);
-    //  log(cmd);
-    //  console.log(cmd,arg1,arg2,arg3);
+    const raw1 = state.memory[state.ptr + 1];
+    const raw2 = state.memory[state.ptr + 2];
+    const raw3 = state.memory[state.ptr + 3];
+    const arg1 = resolve(raw1);
+    const arg2 = resolve(raw2);
+    const arg3 = resolve(raw3);
     switch (cmd) {
         case 0: // halt
             return { ...state, ptr: -1 };
@@ -88,28 +92,15 @@ const tick = (state) => {
         // rmem: 15 a b
         // read memory at address <b> and write it to <a>
         case 15: // rmem
-            const writeAddr = state.memory[state.ptr + 1];
-            const readAddr = state.memory[state.ptr + 2];
-            // console.log(readAddr);
-            // const readMem = state.memory[readAddr];
-            //            const readMemAddr = state.memory[readAddr];
-            const readMem = (readAddr >= 32768 && readAddr <= 32775)
-                ? state.memory[state.register[readAddr - 32768]]
-                : state.memory[readAddr];
-            // console.log(readMem);
-            // console.log(state.memory[readMem]);
-            if (writeAddr >= 32768 && writeAddr <= 32775) {
-                state.register.splice(writeAddr - 32768, 1, readMem);
-                return { ...state, ptr: state.ptr + 3 };
-            }
-            state.memory.splice(writeAddr, 1, state.memory[readMem]);
+            const readMem = state.memory[arg2];
+            // console.log('read ', readMem);
+            // console.log('write', readMem, 'to reg', raw1 - 32768);
+            state.register.splice(raw1 - 32768, 1, readMem);
             return { ...state, ptr: state.ptr + 3 };
         // wmem: 16 a b
         // write the value from <b> into memory at address <a>
         case 16: // wmem
-            //state.memory.splice(arg1, 1, arg2);
-            const wmemAddr = state.read2(state.ptr + 1);
-            state.register.splice(wmemAddr, 1, arg2);
+            state.memory.splice(arg1, 1, arg2);
             state.terminate--;
             return { ...state, ptr: state.ptr + 3 };
         // call: 17 a
@@ -148,8 +139,7 @@ while (true) {
     instructionCount++;
     if (state.ptr < 0)
         break;
-    if (state.terminate < 0)
-        break;
+    // if (state.terminate < 0) break;
     // console.log(state.register);
 }
 // console.log(state.register);

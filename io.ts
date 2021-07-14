@@ -4,6 +4,7 @@ import { State } from './state';
 
 const debug = (msg: string) => console.log(msg);
 
+
 export const readfile = (fn: string) => {
     const fp = path.join(__dirname, `./${fn}`);
     return readFileSync(fp);
@@ -40,11 +41,15 @@ const commands = [
      { cmd:21, name: 'noop', params: 0},
 ];
 
+let tab = 0;
 
 export const printCommand = (state: State) => {
     const cmd = state.read(state.ptr);
     const command = commands.find(c => c.cmd === cmd);
     if (command === undefined) return;
+    if (command.name === 'out') return;
+
+
 
     const args = [
         state.read(state.ptr + 1),
@@ -52,44 +57,32 @@ export const printCommand = (state: State) => {
         state.read(state.ptr + 3),
     ];
 
-    const raw = [
-        state.memory[state.ptr + 1],
-        state.memory[state.ptr + 2],
-        state.memory[state.ptr + 3],
-    ];
+    const r = (num: number): string => {
+        if (num >= 32768 && num <= 32775) {
+            return 'reg' + (num-32768).toString();
+        }
+        return num.toString();
+    }
 
-    const opargs = args.slice(0, command?.params);
+    const raw = [
+        r(state.memory[state.ptr + 1]),
+        r(state.memory[state.ptr + 2]),
+        r(state.memory[state.ptr + 3]),
+    ].slice(0, command?.params).toString().padEnd(17);
+
+    const opargs = args.slice(0, command?.params).toString().padEnd(20);;
 
     const arg1 = state.read(state.ptr + 1);
     const arg2 = state.read(state.ptr + 2);
     const arg3 = state.read(state.ptr + 3);
 
-    console.log(`${command?.name}\t(${state.ptr})\t${opargs}\t\t ${raw} \t\t${state.register} `);
-}
 
-export const log = (num: number) => {
-    switch(num) {
-        // case 0: debug('halt'); break;
-        case 1: debug('set'); break;
-        case 2: debug('push'); break;
-        case 3: debug('pop'); break;
-        case 4: debug('eq'); break;
-        case 5: debug('gt'); break;
-        case 6: debug('jmp'); break;
-        case 7: debug('jt'); break;
-        case 8: debug('jf'); break;
-        case 9: debug('add'); break;
-        case 10: debug('mult'); break;
-        case 11: debug('mod'); break;
-        case 12: debug('and'); break;
-        case 13: debug('or'); break;
-        case 14: debug('not'); break;
-        case 15: debug('rmen'); break;
-        case 16: debug('wmen'); break;
-        case 17: debug('call'); break;
-        case 18: debug('ret'); break;
-        case 19: debug('out'); break;
-        case 20: debug('in'); break;
-        case 21: debug('noop'); break;
+
+    console.log(`${"\t".repeat(tab)}${state.ptr}>\t${command?.name}\t${raw} ${opargs} ${state.register} `);
+    if (['ret', 'call'].includes(command.name)) {
+        console.log();
     }
-};
+
+    if (command.name === 'call') tab++;
+    if (command.name === 'ret') tab--;
+}
