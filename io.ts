@@ -1,9 +1,14 @@
-import {readFileSync} from 'fs';
+import { readFileSync } from 'fs';
 import * as path from 'path';
-import { State } from './state';
+import { State } from './synacor';
 
-const debug = (msg: string) => console.log(msg);
-
+  export const readKey = () => {
+    process.stdin.setRawMode(true)
+    return new Promise(resolve => process.stdin.once('data', (a) => {
+      process.stdin.setRawMode(false)
+      resolve(a.readUInt8());
+    }))
+  }
 
 export const readfile = (fn: string) => {
     const fp = path.join(__dirname, `./${fn}`);
@@ -13,8 +18,6 @@ export const readfile = (fn: string) => {
 export const print = (ascii: number): void => {
     process.stdout.write(String.fromCharCode(ascii));
 }
-
-
 
 const commands = [
      { cmd:0, name: 'halt', params: 0},
@@ -48,8 +51,6 @@ export const printCommand = (state: State) => {
     const command = commands.find(c => c.cmd === cmd);
     if (command === undefined) return;
     if (command.name === 'out') return;
-
-
 
     const args = [
         state.read(state.ptr + 1),
@@ -85,4 +86,5 @@ export const printCommand = (state: State) => {
 
     if (command.name === 'call') tab++;
     if (command.name === 'ret') tab--;
+    if (tab < 0) tab = 0;
 }

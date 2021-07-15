@@ -1,22 +1,54 @@
-import { readfile, print, printCommand } from './io';
-import { State } from './state';
+import { readfile, print, readKey, printCommand } from './io';
 
 console.log();
 
+export class State {
+    public ptr: number;
+    public register: number[];
+    public stack: number[];
+    public memory: number[];
+    public debug: boolean = false;
 
-const surr = (address: number, memory: number[]) => {
-    console.log(memory[address-3],memory[address-2],memory[address-1],memory[address],memory[address+1],memory[address+2],memory[address+3],);
+    public terminate: number;
+
+    constructor(buf: Buffer) {
+        this.ptr = 0;
+        this.register = [0, 0, 0, 0, 0, 0, 0, 0];
+        this.stack = [];
+        this.memory = [];
+        this.terminate = 4;
+        for (let i = 0; i < buf.length ; i+=2) {
+            const l = buf.readUInt8(i);
+            const h = buf.readUInt8(i+1) & 0x7FFF;
+            const v = (h << 8) + l;
+            this.memory.push(v);
+        }            
+    }
+
+    read = (address: number) => {
+        const value = this.memory[address];
+        if (value >= 32768 && value <= 32775) {
+            return this.register[value - 32768];
+        }
+        return value;
+    }
+
+    read2 = (address: number) => {
+        return this.memory[address] - 32768;
+    }
 }
 
-const resolve = (x: number): number => {
-    return (x >= 32768 && x <= 32775) ? state.register[x - 32768] : x;
-}
 
-const tick = (state: State): State => {
+
+const tick = async(state: State): Promise<State> => {
 
     if (state.ptr > state.memory.length) {
         console.log('EOF');
         return { ...state, ptr: -1 };
+    }
+
+    const resolve = (x: number): number => {
+        return (x >= 32768 && x <= 32775) ? state.register[x - 32768] : x;
     }
 
     const cmd = state.read(state.ptr);
@@ -32,21 +64,12 @@ const tick = (state: State): State => {
         case 0: // halt
             return { ...state, ptr: -1 };
             
-        // set: 1 a b
-        // set register <a> to the value of <b>
         case 1: // set
             state.register.splice(raw1 - 32768, 1, arg2);
-            return {
-                ...state,
-                ptr: state.ptr + 3
-            };
+            return { ...state, ptr: state.ptr + 3 };
 
         case 2: // push
-            return {
-                ...state,
-                stack: [arg1, ...state.stack],
-                ptr: state.ptr + 2
-            };
+            return { ...state, stack: [arg1, ...state.stack], ptr: state.ptr + 2 };
 
         case 3: // pop
             const [pop, ...rem] = state.stack;
@@ -54,8 +77,6 @@ const tick = (state: State): State => {
             state.register.splice(popWrite, 1, pop);
             return {...state, stack: rem, ptr: state.ptr + 2 };
 
-        // eq: 4 a b c
-        // set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
         case 4: // eq
             const eqset = arg2 === arg3 ? 1 : 0;
             const eq = state.read2(state.ptr + 1);
@@ -109,36 +130,23 @@ const tick = (state: State): State => {
 
         case 14: // not
             const bin = (arg2).toString(2).padStart(15, "0");
-            const dec = [...bin].map(x => x==="0" ? "1" : "0").join('');
+            const dec = [...bin].map(x => x === "0" ? "1" : "0").join('');
             const bwnot = parseInt(dec, 2);
             const not = state.read2(state.ptr + 1);
             state.register.splice(not, 1, bwnot);
             return { ...state, ptr: state.ptr + 3 };
 
-        // rmem: 15 a b
-        // read memory at address <b> and write it to <a>
         case 15: // rmem
             const readMem = state.memory[arg2];
-            // console.log('read ', readMem);
-            // console.log('write', readMem, 'to reg', raw1 - 32768);
             state.register.splice(raw1 - 32768, 1, readMem);
             return { ...state, ptr: state.ptr + 3 };
 
-        // wmem: 16 a b
-        // write the value from <b> into memory at address <a>
         case 16: // wmem
             state.memory.splice(arg1, 1, arg2);
-            state.terminate--;
             return { ...state, ptr: state.ptr + 3 };
             
-        // call: 17 a
-        // write the address of the next instruction to the stack and jump to <a>
         case 17: // call
-            return {
-                ...state,
-                stack: [state.ptr + 2, ...state.stack],
-                ptr: arg1
-            };
+            return { ...state, stack: [state.ptr + 2, ...state.stack], ptr: arg1 };
 
         case 18: // ret
             const [ ret, ...rstack ] = state.stack;
@@ -151,38 +159,41 @@ const tick = (state: State): State => {
         // in: 20 a
         // read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
         case 20:
-            console.log('=== read ===');
-            return  { ...state, ptr: -1 };
+//            state.debug = true;
+            const key = await readKey() as number;
+            if (key === 27) process.exit(0);
+//            console.log('kp', key, String.fromCharCode(key));
+            print(key);
+            state.register.splice(raw1 - 32768, 1, key === 13 ? 10 : key);
+            return { ...state, ptr: state.ptr + 2 };
 
         case 21: // noop
             return { ...state, ptr: state.ptr + 1 };
 
         default:
-            surr(state.ptr, state.memory);
             console.log(` *** COMMAND MISSING *** : ${cmd}`);
             break;
     }
-
-    
-
     return { ...state, ptr: state.ptr + 1 };
 }
 
-let state = new State(readfile('challenge.bin'));
-let instructionCount = 0;
-while (true) {
-    state = tick(state);
-    // printCommand(state);
-    instructionCount++;
-    if (state.ptr < 0) break;
-    // if (state.terminate < 0) break;
-    // console.log(state.register);
+const run = async() => {
+    let state = new State(readfile('challenge.bin'));
+    let instructionCount = 0;
+    while (true) {
+        state = await tick(state);
+        if (state.debug) printCommand(state);
+        instructionCount++;
+        if (state.ptr < 0) break;
+    }
+
+    console.log('Instructions : ', instructionCount);
+    console.log('-- end --');
+
 }
 
-// console.log(state.register);
-console.log('Instructions : ', instructionCount);
-console.log('-- end --');
-
+run();
 // 1 : OKjvrkoklplG
 // 2 : lJsOWtHjOMQj
-// 3 : 
+// 3 : tEMitlnuOwDH
+// 4 : RiiOHrXQkcdB
