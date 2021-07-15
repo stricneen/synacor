@@ -32,12 +32,21 @@ const tick = (state: State): State => {
         case 0: // halt
             return { ...state, ptr: -1 };
             
+        // set: 1 a b
+        // set register <a> to the value of <b>
         case 1: // set
             state.register.splice(raw1 - 32768, 1, arg2);
-            return { ...state, ptr: state.ptr + 3 };
+            return {
+                ...state,
+                ptr: state.ptr + 3
+            };
 
         case 2: // push
-            return { ...state, stack: [arg1, ...state.stack], ptr: state.ptr + 2 };
+            return {
+                ...state,
+                stack: [arg1, ...state.stack],
+                ptr: state.ptr + 2
+            };
 
         case 3: // pop
             const [pop, ...rem] = state.stack;
@@ -45,6 +54,8 @@ const tick = (state: State): State => {
             state.register.splice(popWrite, 1, pop);
             return {...state, stack: rem, ptr: state.ptr + 2 };
 
+        // eq: 4 a b c
+        // set <a> to 1 if <b> is equal to <c>; set it to 0 otherwise
         case 4: // eq
             const eqset = arg2 === arg3 ? 1 : 0;
             const eq = state.read2(state.ptr + 1);
@@ -104,18 +115,30 @@ const tick = (state: State): State => {
             state.register.splice(not, 1, bwnot);
             return { ...state, ptr: state.ptr + 3 };
 
+        // rmem: 15 a b
+        // read memory at address <b> and write it to <a>
         case 15: // rmem
             const readMem = state.memory[arg2];
+            // console.log('read ', readMem);
+            // console.log('write', readMem, 'to reg', raw1 - 32768);
             state.register.splice(raw1 - 32768, 1, readMem);
             return { ...state, ptr: state.ptr + 3 };
 
+        // wmem: 16 a b
+        // write the value from <b> into memory at address <a>
         case 16: // wmem
             state.memory.splice(arg1, 1, arg2);
             state.terminate--;
             return { ...state, ptr: state.ptr + 3 };
             
+        // call: 17 a
+        // write the address of the next instruction to the stack and jump to <a>
         case 17: // call
-            return { ...state, stack: [state.ptr + 2, ...state.stack], ptr: arg1 };
+            return {
+                ...state,
+                stack: [state.ptr + 2, ...state.stack],
+                ptr: arg1
+            };
 
         case 18: // ret
             const [ ret, ...rstack ] = state.stack;
@@ -129,7 +152,7 @@ const tick = (state: State): State => {
         // read a character from the terminal and write its ascii code to <a>; it can be assumed that once input starts, it will continue until a newline is encountered; this means that you can safely read whole lines from the keyboard and trust that they will be fully read
         case 20:
             console.log('=== read ===');
-            return { ...state, ptr: -1 };
+            return  { ...state, ptr: -1 };
 
         case 21: // noop
             return { ...state, ptr: state.ptr + 1 };
@@ -139,7 +162,8 @@ const tick = (state: State): State => {
             console.log(` *** COMMAND MISSING *** : ${cmd}`);
             break;
     }
-  
+
+    
 
     return { ...state, ptr: state.ptr + 1 };
 }

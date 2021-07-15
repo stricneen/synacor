@@ -32,10 +32,4 @@ export class State {
     read2 = (address: number) => {
         return this.memory[address] - 32768;
     }
-
-    
-    // r3 = () => {
-    //     // const or = this.ptr + 1;
-    //     return this.memory[this.ptr + 1] - 32768;
-    // }
 }
